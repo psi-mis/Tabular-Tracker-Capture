@@ -41,7 +41,7 @@ DHISUtil.retrieveUserInfo = function( runFunc )
 
 DHISUtil.retrieveUserAccount = function( runFunc )
 {
-	RESTUtil.retrieveManager.retrieveData( _queryURL_me + '/user-account.json'
+	RESTUtil.retrieveManager.retrieveData( _queryURL_me 
 	, function( json_data ) 
 	{
 		if ( runFunc !== undefined ) runFunc( json_data );
@@ -213,9 +213,45 @@ FormUtil.validateValueType = function( tag, inputType )
 			pass = false;
 		}
 	}
+	else if ( inputType == "INTEGER" )
+	{
+		var reg = new RegExp( '^(-)*[0-9]+$' );
+
+		if ( !emptyValCase && !reg.test( tag.val() ) )
+		{
+			Util.paintWarning( tag );
+			tag.attr( 'title', 'This field is Integer Only field.' );
+			tag.attr( 'notvalid', 'Y' );
+			pass = false;
+		}
+	}
+	else if ( inputType == "INTEGER_POSITIVE" )
+	{
+		var reg = new RegExp( '^[1-9]+[0-9]*$' );
+
+		if ( !emptyValCase && !reg.test( tag.val() ) )
+		{
+			Util.paintWarning( tag );
+			tag.attr( 'title', 'This field is Positive Integer Only field.' );
+			tag.attr( 'notvalid', 'Y' );
+			pass = false;
+		}
+	}
+	else if ( inputType == "INTEGER_ZERO_OR_POSITIVE" )
+	{
+		var reg = new RegExp( '^[0-9]+$' );
+
+		if ( !emptyValCase && !reg.test( tag.val() ) )
+		{
+			Util.paintWarning( tag );
+			tag.attr( 'title', 'This field is Zero or Positive Integer Only field.' );
+			tag.attr( 'notvalid', 'Y' );
+			pass = false;
+		}
+	}
 	else if ( inputType == "INTEGER_NEGATIVE" )
 	{
-		var reg = new RegExp( '^(-)[0-9]*$' );
+		var reg = new RegExp( '^(-)[1-9]+[0-9]*$' );
 
 		if ( !emptyValCase && !reg.test( tag.val() ) )
 		{
@@ -227,14 +263,17 @@ FormUtil.validateValueType = function( tag, inputType )
 	}
 	else if ( inputType == "UNIT_INTERVAL" )
 	{
-		var reg = new RegExp( '^(0\\.)[0-9]*$' );
-
-		if ( !emptyValCase && !reg.test( tag.val() ) )
+		if( tag.val() != "0" && tag.val() != "1" )
 		{
-			Util.paintWarning( tag );
-			tag.attr( 'title', 'This field only accepts a decimal value between 0 and 1.' );
-			tag.attr( 'notvalid', 'Y' );
-			pass = false;
+			var reg = new RegExp( '^(0\\.)[0-9]+$' );
+
+			if ( !emptyValCase && !reg.test( tag.val() ) )
+			{
+				Util.paintWarning( tag );
+				tag.attr( 'title', 'This field only accepts a decimal value between 0 and 1.' );
+				tag.attr( 'notvalid', 'Y' );
+				pass = false;
+			}
 		}
 	}
 	else if ( inputType == "COORDINATE" )
@@ -276,7 +315,7 @@ FormUtil.validateValueType = function( tag, inputType )
 	}
 	else if ( inputType == "LETTER" )
 	{
-		var reg = new RegExp( '^[a-zA-Z]*$' );
+		var reg = new RegExp( '^[a-zA-Z]+$' );
 
 		if ( !emptyValCase && !reg.test( tag.val() ) )
 		{
@@ -307,6 +346,18 @@ FormUtil.validateValueType = function( tag, inputType )
 		{
 			Util.paintWarning( tag );
 			tag.attr( 'title', 'This field is URL type, format starts with "http(s)://-.-.-(/)"' );
+			tag.attr( 'notvalid', 'Y' );
+			pass = false;
+		}
+	}
+	else if( inputType == "EMAIL" )
+	{
+		var reg = new RegExp( '^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$' );
+
+		if ( !emptyValCase && !reg.test( tag.val() ) )
+		{
+			Util.paintWarning( tag );
+			tag.attr( 'title', 'This field is Email field.' );
 			tag.attr( 'notvalid', 'Y' );
 			pass = false;
 		}
@@ -363,7 +414,11 @@ FormUtil.setGeometryJson = function( jsonData, coords )
 // NOTE: Somehow, on create, we need to pass coordinate info rather than geometry info...  Maybe both?
 FormUtil.getCoordinateJson = function( jsonData, coords )
 {
-	if ( coords ) jsonData.coordinate = { "latitude": coords.latitude, "longitude": coords.longitude };
+	if ( coords ) {
+		jsonData.geometry = {};
+		jsonData.geometry.type = "Point",
+		jsonData.geometry.coordinates = [ coords.longitude, coords.latitude ];
+	}
 };
 
 

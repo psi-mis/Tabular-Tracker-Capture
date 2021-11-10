@@ -272,6 +272,17 @@ function PersonDialogForm( TabularDEObj )
 	}
 
 
+	me.validateTEAControlVal = function()
+	{
+		var checkedValueType = true;
+		me.personDialogFormTag.find("input,select").each(function(){
+			var checked = FormUtil.validateValueType( $(this), $(this).attr("valType") );
+			if( !checked ) checkedValueType = false;
+		});
+		
+		return checkedValueType;
+	}
+
 	me.FormPopupSetup = function()
 	{
 		// -- Set up the form -------------------
@@ -284,72 +295,166 @@ function PersonDialogForm( TabularDEObj )
 		  buttons: {
 			"Create": function() {
 
-				var dialogForm = $( this );
-
-				// Perform the mandatory filled check first.
-				if ( me.checkFieldsData() && ProgramRuleUtil.checkProgramRuleData( me.personDialogTableTag ) )
+				if( me.validateTEAControlVal() )
 				{
-					var orgUnitId = me.TabularDEObj.getOrgUnitId();
-					var defaultProgramId = me.TabularDEObj.getSelectedProgramId();
-					var defaultDateInFormat = $.format.date( me.TabularDEObj.getDefaultStartDate(), _dateFormat_YYYYMMDD_Dash );
-					var enrollementDateInFormat = $.format.date( Util.getDate_FromYYYYMMDD( me.enrolmentDateTag.val() ), _dateFormat_YYYYMMDD_Dash );
-					var incidentDateInFormat = $.format.date( Util.getDate_FromYYYYMMDD( me.incidentDateTag.val() ), _dateFormat_YYYYMMDD_Dash );
-
-					// duplicate check not working anymore..
-					me.checkDuplicateData( orgUnitId, defaultProgramId, undefined, function()
-					{
-						// Create json object for Tracked Entity Instance
-						var personData = me.setupPersonDataNew( orgUnitId );
 						
-						FormUtil.checkGeoLocation( _enableCoordinateCapture, function( geoLoc )
-						{						
-							// if ( geoLoc ) me.setGeometryJson( json_Data, geoLoc.coords );
-							if ( geoLoc ) FormUtil.setGeometryJson( personData, geoLoc.coords );
-			
+					var dialogForm = $( this );
 
-							// Add Enrollment information
-							personData.enrollments = [];
-							var enrollment = {
-								"orgUnit": orgUnitId,
-								"program": defaultProgramId,
-								"enrollmentDate": enrollementDateInFormat,
-								"incidentDate": incidentDateInFormat
-							};
-							personData.enrollments.push( enrollment );
+					// Perform the mandatory filled check first.
+					if ( me.checkFieldsData() && ProgramRuleUtil.checkProgramRuleData( me.personDialogTableTag ) )
+					{
+						var orgUnitId = me.TabularDEObj.getOrgUnitId();
+						var defaultProgramId = me.TabularDEObj.getSelectedProgramId();
+						var defaultDateInFormat = $.format.date( me.TabularDEObj.getDefaultStartDate(), _dateFormat_YYYYMMDD_Dash );
+						var enrollementDateInFormat = $.format.date( Util.getDate_FromYYYYMMDD( me.enrolmentDateTag.val() ), _dateFormat_YYYYMMDD_Dash );
+						var incidentDateInFormat = $.format.date( Util.getDate_FromYYYYMMDD( me.incidentDateTag.val() ), _dateFormat_YYYYMMDD_Dash );
 
+						// duplicate check not working anymore..
+						me.checkDuplicateData( orgUnitId, defaultProgramId, undefined, function()
+						{
+							// Create json object for Tracked Entity Instance
+							var personData = me.setupPersonDataNew( orgUnitId );
 							
-							
-							RESTUtil.submitData( personData, _queryURL_PersonSubmit, "POST", function( returnData )
-							{
-								if ( returnData.response === undefined || returnData.response.status != 'SUCCESS' )
+							FormUtil.checkGeoLocation( _enableCoordinateCapture, function( geoLoc )
+							{						
+								// if ( geoLoc ) FormUtil.setGeometryJson( personData, geoLoc.coords );
+				
+
+								// // Add Enrollment information
+								// personData.enrollments = [];
+								// var enrollment = {
+								// 	"orgUnit": orgUnitId,
+								// 	"program": defaultProgramId,
+								// 	"enrollmentDate": enrollementDateInFormat,
+								// 	"incidentDate": incidentDateInFormat
+								// };
+								// personData.enrollments.push( enrollment );
+
+								
+								
+								RESTUtil.submitData( personData, _queryURL_PersonSubmit, "POST", function( returnData )
 								{
-									me.personCreateUpdate_Fail_Handle( returnData );
-								}
-								else
-								{	
-									var personId;
-									if( _settingForm.DHISVersion == "2.25" || _settingForm.DHISVersion == "2.26" )
+									if ( returnData.response === undefined || returnData.response.status != 'SUCCESS' )
 									{
-										personId = returnData.response.reference;
+										me.personCreateUpdate_Fail_Handle( returnData );
+									}
+									else
+									{	
+										var personId;
+										if( _settingForm.DHISVersion == "2.25" || _settingForm.DHISVersion == "2.26" )
+										{
+											personId = returnData.response.reference;
+										}
+										else
+										{
+											personId = returnData.response.importSummaries[0].reference;
+										}
+
+										if ( Util.checkDefined( personId ) )
+										{
+											MsgManager.msgAreaShow( $( 'span.msg_PersonCreated' ).text() );
+											
+
+											// Enroll
+											me.TabularDEObj.checkProgramEnroll( personId, defaultProgramId, orgUnitId
+											, function() 
+											{
+												if ( me.afterSaveAction !== undefined ) me.afterSaveAction();
+											}
+											, function()
+											{ 
+												me.TabularDEObj.programEnroll( personId, undefined, defaultProgramId, orgUnitId, enrollementDateInFormat, incidentDateInFormat, false, "POST"
+												, function( returnData )
+												{
+													MsgManager.msgAreaShow( $( 'span.msg_ProgramEnrolled' ).text() );
+													if ( me.afterSaveAction !== undefined ) me.afterSaveAction();
+												}
+												, function( returnData )
+												{
+													alert( $( 'span.msg_ProgramEnrollFailed' ).text() + '\n\n Error: ' + JSON.stringify( returnData ) );
+												});
+											});
+											
+											
+											if ( me.afterSaveAction !== undefined ) me.afterSaveAction();
+											
+											var programId = me.TabularDEObj.searchPanel.programManager.selectedProgramId;
+											PersonUtil.getPersonByID_Reuse( personId, programId, function( item_Person )
+											{
+												me.TabularDEObj.setPersonInfoRow( me.currentPersonTr, item_Person );
+
+												// Auto Close after Create New
+												dialogForm.dialog( "close" );
+												me.currentPersonTr.find( '.personInfo' ).focus();
+											});
+										}
+									}
+								}
+								, me.personCreateUpdate_Fail_Handle );
+							});
+						});
+					}
+				}
+			},
+			"Update": function() {
+
+				if( me.validateTEAControlVal() )
+				{	
+					var dialogForm = $( this );
+
+					// Perform the mandatory filled check first.
+					if ( me.checkFieldsData() && ProgramRuleUtil.checkProgramRuleData( me.personDialogTableTag ) )
+					{
+						var orgUnitId = me.TabularDEObj.getOrgUnitId();
+						var defaultProgramId = me.TabularDEObj.getSelectedProgramId();
+						var defaultDateInFormat = $.format.date( me.TabularDEObj.getDefaultStartDate(), _dateFormat_YYYYMMDD_Dash );
+						var enrollementDateInFormat = $.format.date( Util.getDate_FromYYYYMMDD( me.enrolmentDateTag.val() ), _dateFormat_YYYYMMDD_Dash );
+						var incidentDateInFormat = $.format.date( Util.getDate_FromYYYYMMDD( me.incidentDateTag.val() ), _dateFormat_YYYYMMDD_Dash );
+
+						var personId = me.personDialogFormTag.find( "#person_id" ).val();
+
+						me.checkDuplicateData( orgUnitId, defaultProgramId, personId, function()
+						{
+							me.setupPersonDataUpdate( me.personLoadedJson );
+
+							RESTUtil.submitData( me.personLoadedJson, _queryURL_PersonSubmit + '/' + personId, "PUT"
+								, function( returnData )
+								{
+
+									if ( returnData.response === undefined || returnData.response.status != 'SUCCESS' )
+									{
+										me.personCreateUpdate_Fail_Handle( returnData );
 									}
 									else
 									{
-										personId = returnData.response.importSummaries[0].reference;
-									}
 
-									if ( Util.checkDefined( personId ) )
-									{
-										MsgManager.msgAreaShow( $( 'span.msg_PersonCreated' ).text() );
-										
+										MsgManager.msgAreaShow( $( 'span.msg_PersonInfoUpdated' ).text() );
 
-										/* // Enroll
+
+										// Enroll
 										me.TabularDEObj.checkProgramEnroll( personId, defaultProgramId, orgUnitId
-										, function() 
+										, function(activeEnrollment) 
 										{
-											if ( me.afterSaveAction !== undefined ) me.afterSaveAction();
+											if ( activeEnrollment === undefined ){
+												// DHIS 2.28 doesnt allow to change [EnrolmentDate] and [IncidentDate] after enrollmenent
+												me.TabularDEObj.programEnroll( personId, undefined, defaultProgramId, orgUnitId, enrollementDateInFormat, incidentDateInFormat, false, "POST"
+													, function( returnData )
+													{
+														me.afterSaveAction();
+													}
+													, function( returnData )
+													{
+														alert( $( 'span.msg_ProgramEnrollFailed' ).text() + '\n\n Error: ' + JSON.stringify( returnData ) );
+													});
+													
+												// me.afterSaveAction();
+											}
+											else {
+												me.afterSaveAction();
+											}
 										}
 										, function()
-										{ 
+										{
 											me.TabularDEObj.programEnroll( personId, undefined, defaultProgramId, orgUnitId, enrollementDateInFormat, incidentDateInFormat, false, "POST"
 											, function( returnData )
 											{
@@ -361,116 +466,27 @@ function PersonDialogForm( TabularDEObj )
 												alert( $( 'span.msg_ProgramEnrollFailed' ).text() + '\n\n Error: ' + JSON.stringify( returnData ) );
 											});
 										});
-										*/
-										
-										if ( me.afterSaveAction !== undefined ) me.afterSaveAction();
-										
-										var programId = me.TabularDEObj.searchPanel.programManager.selectedProgramId;
-										PersonUtil.getPersonByID_Reuse( personId, programId, function( item_Person )
-										{
-											me.TabularDEObj.setPersonInfoRow( me.currentPersonTr, item_Person );
 
-											// Auto Close after Create New
-											dialogForm.dialog( "close" );
-											me.currentPersonTr.find( '.personInfo' ).focus();
-										});
+
+										// Save the item_Person data into memory - for reuse (by queryStr id)
+										PersonUtil.getPersonByID_Reuse_ManualInsert( personId, defaultProgramId, me.personLoadedJson );
+
+										// Re-Populate Data to the form <-- Do we need it?
+										me.TabularDEObj.populatePersonAttirbutesToRow( me.currentPersonTr, me.personLoadedJson.attributes );
+
+										// Re-Run the ProgramRules on Event Rows
+										me.reRun_EventRowProgramRules( me.currentPersonTr, personId );
+
+										// Auto Close after Update
+										dialogForm.dialog( "close" );
+										me.currentPersonTr.find( '.personInfo' ).focus();
 									}
+
 								}
-							}
-							, me.personCreateUpdate_Fail_Handle );
+								, me.personCreateUpdate_Fail_Handle
+							);
 						});
-					});
-				}
-
-			},
-			"Update": function() {
-
-				var dialogForm = $( this );
-
-				// Perform the mandatory filled check first.
-				if ( me.checkFieldsData() && ProgramRuleUtil.checkProgramRuleData( me.personDialogTableTag ) )
-				{
-					var orgUnitId = me.TabularDEObj.getOrgUnitId();
-					var defaultProgramId = me.TabularDEObj.getSelectedProgramId();
-					var defaultDateInFormat = $.format.date( me.TabularDEObj.getDefaultStartDate(), _dateFormat_YYYYMMDD_Dash );
-					var enrollementDateInFormat = $.format.date( Util.getDate_FromYYYYMMDD( me.enrolmentDateTag.val() ), _dateFormat_YYYYMMDD_Dash );
-					var incidentDateInFormat = $.format.date( Util.getDate_FromYYYYMMDD( me.incidentDateTag.val() ), _dateFormat_YYYYMMDD_Dash );
-
-					var personId = me.personDialogFormTag.find( "#person_id" ).val();
-
-					me.checkDuplicateData( orgUnitId, defaultProgramId, personId, function()
-					{
-						me.setupPersonDataUpdate( me.personLoadedJson );
-
-						RESTUtil.submitData( me.personLoadedJson, _queryURL_PersonSubmit + '/' + personId, "PUT"
-							, function( returnData )
-							{
-
-								if ( returnData.response === undefined || returnData.response.status != 'SUCCESS' )
-								{
-									me.personCreateUpdate_Fail_Handle( returnData );
-								}
-								else
-								{
-
-									MsgManager.msgAreaShow( $( 'span.msg_PersonInfoUpdated' ).text() );
-
-
-									// Enroll
-									me.TabularDEObj.checkProgramEnroll( personId, defaultProgramId, orgUnitId
-									, function(activeEnrollment) 
-									{
-										if ( activeEnrollment === undefined ){
-											// DHIS 2.28 doesnt allow to change [EnrolmentDate] and [IncidentDate] after enrollmenent
-											me.TabularDEObj.programEnroll( personId, undefined, defaultProgramId, orgUnitId, enrollementDateInFormat, incidentDateInFormat, false, "POST"
-												, function( returnData )
-												{
-													me.afterSaveAction();
-												}
-												, function( returnData )
-												{
-													alert( $( 'span.msg_ProgramEnrollFailed' ).text() + '\n\n Error: ' + JSON.stringify( returnData ) );
-												});
-												
-											// me.afterSaveAction();
-										}
-										else {
-											me.afterSaveAction();
-										}
-									}
-									, function()
-									{
-										me.TabularDEObj.programEnroll( personId, undefined, defaultProgramId, orgUnitId, enrollementDateInFormat, incidentDateInFormat, false, "POST"
-										, function( returnData )
-										{
-											MsgManager.msgAreaShow( $( 'span.msg_ProgramEnrolled' ).text() );
-											if ( me.afterSaveAction !== undefined ) me.afterSaveAction();
-										}
-										, function( returnData )
-										{
-											alert( $( 'span.msg_ProgramEnrollFailed' ).text() + '\n\n Error: ' + JSON.stringify( returnData ) );
-										});
-									});
-
-
-									// Save the item_Person data into memory - for reuse (by queryStr id)
-									PersonUtil.getPersonByID_Reuse_ManualInsert( personId, defaultProgramId, me.personLoadedJson );
-
-									// Re-Populate Data to the form <-- Do we need it?
-									me.TabularDEObj.populatePersonAttirbutesToRow( me.currentPersonTr, me.personLoadedJson.attributes );
-
-									// Re-Run the ProgramRules on Event Rows
-									me.reRun_EventRowProgramRules( me.currentPersonTr, personId );
-
-									// Auto Close after Update
-									dialogForm.dialog( "close" );
-									me.currentPersonTr.find( '.personInfo' ).focus();
-								}
-
-							}
-							, me.personCreateUpdate_Fail_Handle
-						);
-					});
+					}
 				}
 
 			},
@@ -500,33 +516,7 @@ function PersonDialogForm( TabularDEObj )
 
 	me.getTrackedEntityId_Person = function()
 	{
-		if ( me.trackedEntityId_Person === undefined )
-		{
-			var json_TrackedEntities = $.parseJSON( RESTUtil.getSynchData( _queryURL_TrackedEntities + '.json?query=Person' ) );
-
-			// Lower DHIS 2.30
-			// var trackedEntities = json_TrackedEntities.trackedEntities;
-			// DHIS 2.30
-			var trackedEntities = json_TrackedEntities.trackedEntityTypes;
-			
-			for ( i = 0; i < trackedEntities.length ; i++ )
-			{
-				var trackedEntity = trackedEntities[i];
-
-				if ( trackedEntity.displayName == "Person" )
-				{
-					me.trackedEntityId_Person = trackedEntity.id;
-					break;
-				}
-			}
-		}
-
-		if ( me.trackedEntityId_Person === undefined )
-		{
-			alert( $( 'span.msg_PersonNotFoundDHIS' ).text() );
-		}
-
-		return me.trackedEntityId_Person;
+		return me.TabularDEObj.getSelectedProgram().trackedEntityType;
 	}
 
 
@@ -712,41 +702,41 @@ function PersonDialogForm( TabularDEObj )
 
 			cntrDropdown.val( value );
 		}
-		else if( valueType == "TEXT" || valueType == "LONG_TEXT" 
-			|| valueType == "NUMBER" || valueType == "INTEGER_ZERO_OR_POSITIVE" 
+		else if( valueType == "TEXT" || valueType == "LONG_TEXT" || valueType == "UNIT_INTERVAL"
+			|| valueType == "NUMBER" || valueType == "INTEGER_ZERO_OR_POSITIVE" || valueType == "INTEGER_NEGATIVE"
 			|| valueType == "INTEGER_POSITIVE" || valueType == "INTEGER" || valueType == "PERCENTAGE"
 			|| valueType == "LETTER" || valueType == "PHONE_NUMBER" || valueType == "EMAIL"  ) //|| valueType == "USERNAME" )
 		{
 			// TODO: For now, have 'username' display as textbox <-- should be user listing
 			attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes );
 
-			if ( valueType == "NUMBER" || valueType == "INTEGER_ZERO_OR_POSITIVE" 
-				|| valueType == "INTEGER_POSITIVE" || valueType == "INTEGER" || valueType == "PERCENTAGE")
-			{
-				PersonUtil.setTagTypeValidation( attributeControl, "NUMBER" );
-			}
-			else if ( valueType == "LETTER" )
-			{
-				PersonUtil.setTagTypeValidation( attributeControl, "LETTER" );
-			}
-			//else if( valueType == "COORDINATE" )
+			// if ( valueType == "NUMBER" || valueType == "INTEGER_ZERO_OR_POSITIVE" 
+			// 	|| valueType == "INTEGER_POSITIVE" || valueType == "INTEGER" || valueType == "PERCENTAGE")
+			// {
+			// 	PersonUtil.setTagTypeValidation( attributeControl, "NUMBER" );
+			// }
+			// else if ( valueType == "LETTER" )
+			// {
+			// 	PersonUtil.setTagTypeValidation( attributeControl, "LETTER" );
+			// }
+			/* //else if( valueType == "COORDINATE" )
 			//{
 			//	PersonUtil.setTagTypeValidation( attributeControl, "COORDINATE" );
-			//}
+			//} */
 		}
-		else if( valueType == "INTEGER_NEGATIVE" )
-		{
-			// TODO: For now, have 'username' display as textbox <-- should be user listing
-			attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes );
-			PersonUtil.setTagTypeValidation( attributeControl, "INTEGER_NEGATIVE" );
-		}
-		else if( valueType == "UNIT_INTERVAL" )
-		{
-			// TODO: For now, have 'username' display as textbox <-- should be user listing
-			attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes );
-			PersonUtil.setTagTypeValidation( attributeControl, "UNIT_INTERVAL" );
-		}
-		else if( valueType == "DATE" )
+		// else if( valueType == "INTEGER_NEGATIVE" )
+		// {
+		// 	// TODO: For now, have 'username' display as textbox <-- should be user listing
+		// 	attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes );
+		// 	// PersonUtil.setTagTypeValidation( attributeControl, "INTEGER_NEGATIVE" );
+		// }
+		// else if( valueType == "UNIT_INTERVAL" )
+		// {
+		// 	// TODO: For now, have 'username' display as textbox <-- should be user listing
+		// 	attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes );
+		// 	// PersonUtil.setTagTypeValidation( attributeControl, "UNIT_INTERVAL" );
+		// }
+		else if( valueType == "DATE" || valueType == "AGE" )
 		{
 			attributeControl = trCurrent.find( ".datepicker" ).val( value ).attr( _view, _view_Yes ).attr('valType', valueType );
 
@@ -765,11 +755,13 @@ function PersonDialogForm( TabularDEObj )
 		}
 		else if( valueType == "TIME" )
 		{
-			attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes ).attr('valType', valueType );
+			trCurrent.find( ".textbox" ).closest("td").css("position", "relative");
+			attributeControl = trCurrent.find( ".textbox" ).css("position", "relative").val( value ).attr( _view, _view_Yes ).attr('valType', valueType );
 			Util.setTimePicker( attributeControl );
 		}
 		else if( valueType == "DATETIME" )
 		{
+			trCurrent.find( ".textbox" ).closest("td").css("position", "relative");
 			attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes ).attr('valType', valueType );
 			Util.setDateTimePicker( attributeControl );
 		}
@@ -777,17 +769,17 @@ function PersonDialogForm( TabularDEObj )
 		else if( valueType == "COORDINATE" )
 		{
 			attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes ).attr('valType', valueType );
-			PersonUtil.setTagTypeValidation( attributeControl, "COORDINATE" );
+			// PersonUtil.setTagTypeValidation( attributeControl, "COORDINATE" );
 		}
 		else if( valueType == "TRUE_ONLY" ) //|| valueType == "TRACKER_ASSOCIATE" )
 		{
 			attributeControl = trCurrent.find( ".checkbox" ).attr( _view, _view_Yes ).prop( 'checked', value );
 		}
-		else if( valueType == "AGE" )
-		{
-			attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes );
-			PersonUtil.setTagTypeValidation( attributeControl, "NUMBER" );
-		}
+		// else if( valueType == "AGE" )
+		// {
+		// 	attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes );
+		// 	PersonUtil.setTagTypeValidation( attributeControl, "NUMBER" );
+		// }
 		else if( valueType == "URL" )
 		{
 			attributeControl = trCurrent.find( ".textbox" ).val( value ).attr( _view, _view_Yes );
@@ -797,6 +789,8 @@ function PersonDialogForm( TabularDEObj )
 		{
 			attributeControl = trCurrent.find( ".labelMsg" ).html( "'" + valueType + "' data type not supported" ).attr( _view, _view_Yes );
 		}
+
+		attributeControl.attr("valType", valueType);
 
 		return attributeControl;
 	}
