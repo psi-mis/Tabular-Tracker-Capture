@@ -1979,7 +1979,12 @@ console.log("getUnregisteredEventsByPersonId" + requestUrl );
 				if ( dataValue != "" ) dataElementValue.value = dataValue;
 
 				var programId = me.TabularDEObj.getSelectedProgram().id;
-				var json_Data = { "program": programId, "status": $(tag).closest("tr.trEventData").attr("eventStatus"), "dataValues": [ dataElementValue ] };
+				var json_Data = { "program": programId
+						, "status": $(tag).closest("tr.trEventData").attr("eventStatus")
+						, "dataValues": [ dataElementValue ]
+						, "event" : eventId
+						, "programStage" : $(tag).closest("tr.trEventData").find(".eventStage").val()
+					};
 
 				FormUtil.checkGeoLocation( _enableCoordinateCapture, function( geoLoc )
 				{						

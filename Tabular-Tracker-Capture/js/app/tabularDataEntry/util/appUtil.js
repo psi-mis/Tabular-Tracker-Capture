@@ -408,6 +408,7 @@ FormUtil.setGeometryJson = function( jsonData, coords )
 		jsonData.geometry = {};
 		jsonData.geometry.type = "Point";
 		jsonData.geometry.coordinates = [ coords.longitude, coords.latitude ];
+		jsonData.geometry.coordinate = { "latitude": coords.latitude, "longitude": coords.longitude };
 	}
 };
 
@@ -418,6 +419,7 @@ FormUtil.getCoordinateJson = function( jsonData, coords )
 		jsonData.geometry = {};
 		jsonData.geometry.type = "Point",
 		jsonData.geometry.coordinates = [ coords.longitude, coords.latitude ];
+		jsonData.geometry.coordinate = { "latitude": coords.latitude, "longitude": coords.longitude };
 	}
 };
 
