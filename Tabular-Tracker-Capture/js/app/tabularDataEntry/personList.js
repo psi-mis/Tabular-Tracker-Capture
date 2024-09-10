@@ -424,7 +424,7 @@ function PersonList( TabularDEObj )
 								}
 								else
 								{
-									requestUrl += '&skipPaging=true&includeAllAttributes=true';
+									requestUrl += '&skipPaging=true&includeAllAttributes=true&program=' + me.TabularDEObj.getSelectedProgram().id;
 
 									// Step 1. Search Person  --- TODO: do the loading message?
 									var xhr_personSearch = RESTUtil.getAsynchData( requestUrl
@@ -539,7 +539,7 @@ function PersonList( TabularDEObj )
 
 	me.checkSearchMaxLimit = function( requestUrl, successFunc )
 	{
-		requestUrl += "&skipPaging=false&pageSize=1&totalPages=true&fields=trackedEntityInstance";
+		requestUrl += "&skipPaging=false&pageSize=1&totalPages=true&fields=trackedEntityInstance&&program=" + me.TabularDEObj.getSelectedProgram().id;
 
 		RESTUtil.getAsynchData( requestUrl, function( jsonData )
 		{

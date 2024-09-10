@@ -417,7 +417,10 @@ function PersonDialogForm( TabularDEObj )
 						{
 							me.setupPersonDataUpdate( me.personLoadedJson );
 
-							RESTUtil.submitData( me.personLoadedJson, _queryURL_PersonSubmit + '/' + personId, "PUT"
+							const programId = me.TabularDEObj.getSelectedProgramId();
+
+							
+							RESTUtil.submitData( me.personLoadedJson, _queryURL_PersonSubmit + '/' + personId + "?program=" + programId, "PUT"
 								, function( returnData )
 								{
 
@@ -836,7 +839,16 @@ function PersonDialogForm( TabularDEObj )
 	me.setupPersonDataUpdate = function( teiJson )
 	{
 		if ( !teiJson ) alert( 'ERROR - On Update, loaded Tei does not exist!' );
-		else me.constructAttributes( teiJson.attributes );
+		else {
+			me.constructAttributes( teiJson.attributes );
+
+			const programId = me.TabularDEObj.getSelectedProgram().id;
+			var foundEnrollment = Util.getFromList( teiJson.enrollments, programId, "program" );
+			if( foundEnrollment !== undefined )
+			{
+				foundEnrollment.attributes = me.constructAttributes();
+			}
+		}
 
 		// 2.30 - On Tei update, we need to remove 'events' to pass the geometry json validation..
 		if ( teiJson.enrollments )

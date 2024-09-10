@@ -354,7 +354,8 @@ function MatrixOrgunitPeriod( _orgUnitSelectionTreePopup, _TabularDEObj )
 							me.searchPanel.defaultDateRowTag.show();
 							$( '#defaultDatePeriod' ).show();
 							
-							me.programStatusListTag.val( _status_ALL );
+							// me.programStatusListTag.val( _status_ALL );
+							me.programStatusListTag.val( _status_ACTIVE );
 							me.searchPanel.defaultRetrievalRowTag.show();
 							me.searchPanel.programManager.defaultProgramTag.val( me.programListTag.val() );
 							me.searchPanel.performDataRetrieval( function(){

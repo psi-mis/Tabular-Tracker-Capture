@@ -219,26 +219,33 @@ function SearchPanel( TabularDEObj )
 		});					
 	}
 
+	// me.displayOrgUnitPersonCount = function( orgUnitId )
+	// {
+	// 	var personFoundCount = 0;
+
+	// 	// Set small page size since we only need number from total count
+		
+	// 	var queryUrl = _queryURL_PersonQuery + ".json?skipPaging=true&fields=trackedEntityInstance&ou=" + orgUnitId;
+	// 	// + "&trackedEntityType=" + me.TabularDEObj.getSelectedProgram().trackedEntityType;
+						
+	// 	$.get( queryUrl, function( personList )
+	// 	{
+	// 		//me.json_PersonList = personList;
+
+	// 		if( personList !== undefined && personList.trackedEntityInstances !== undefined )
+	// 		{
+	// 			personFoundCount = personList.trackedEntityInstances.length;
+
+	// 			me.personFoundNoSpanTag.text( personFoundCount );
+	// 			me.personFoundNoSpanTag.attr( "title", "TEIs in OrgUnit: " + personFoundCount );
+	// 		}					
+	// 	});
+	// }
+
 	me.displayOrgUnitPersonCount = function( orgUnitId )
 	{
-		var personFoundCount = 0;
-
-		// Set small page size since we only need number from total count
-		
-		var queryUrl = _queryURL_PersonQuery + ".json?skipPaging=true&fields=trackedEntityInstance&ou=" + orgUnitId;
-						
-		$.get( queryUrl, function( personList )
-		{
-			//me.json_PersonList = personList;
-
-			if( personList !== undefined && personList.trackedEntityInstances !== undefined )
-			{
-				personFoundCount = personList.trackedEntityInstances.length;
-
-				me.personFoundNoSpanTag.text( personFoundCount );
-				me.personFoundNoSpanTag.attr( "title", "TEIs in OrgUnit: " + personFoundCount );
-			}					
-		});
+		me.personFoundNoSpanTag.text( "" );
+		me.personFoundNoSpanTag.attr( "title", "This function is not supported anymore." );
 	}
 
 	me.clear_OrgUnitData = function()
