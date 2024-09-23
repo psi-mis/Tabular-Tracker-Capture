@@ -599,12 +599,31 @@ function PersonEvent( TabularDEObj, mainPersonTableTag )
 				}
 				else
 				{
-					alert( $( 'span.msg_FailedToCreateEvent' ).text() + '\n\n Error: ' + JSON.stringify( returnData ) );
+					if(returnData.responseJSON 
+						&& returnData.responseJSON.response 
+						&& returnData.responseJSON.response.importSummaries
+						&& returnData.responseJSON.response.importSummaries.length > 0 
+						&& returnData.responseJSON.response.importSummaries[0].description ) {
+							alert( $( 'span.msg_FailedToCreateEvent' ).text() + '\n\n Error: ' + returnData.responseJSON.response.importSummaries[0].description + "\n Please contact admin to solve this issue." )
+						}
+					else {
+						alert( $( 'span.msg_FailedToCreateEvent' ).text() + '\n\n Error: ' + JSON.stringify( returnData ) );
+					}
+					
 				}
 			}
 			, function( returnData ) 
 			{
-				alert( $( 'span.msg_FailedToCreateEvent' ).text() + '\n\n Error: ' + JSON.stringify( returnData ) );
+				if(returnData.responseJSON 
+					&& returnData.responseJSON.response 
+					&& returnData.responseJSON.response.importSummaries
+					&& returnData.responseJSON.response.importSummaries.length > 0 
+					&& returnData.responseJSON.response.importSummaries[0].description ) {
+						alert( $( 'span.msg_FailedToCreateEvent' ).text() + '\n\n Error: ' + returnData.responseJSON.response.importSummaries[0].description + "\n Please contact admin to solve this issue." )
+					}
+				else {
+					alert( $( 'span.msg_FailedToCreateEvent' ).text() + '\n\n Error: ' + JSON.stringify( returnData ) );
+				}
 			}
 			, function()
 			{
